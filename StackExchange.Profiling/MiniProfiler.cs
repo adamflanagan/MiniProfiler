@@ -116,6 +116,9 @@ namespace StackExchange.Profiling
         /// </summary>
         [DataMember(Order = 9)]
         public ClientTimings ClientTimings { get; set; }
+        
+        [DataMember(Order = 10)]
+        public List<LogEntry> LogEntries { get; set; }
 
         /// <summary>
         /// Starts when this profiler is instantiated. Each <see cref="Timing"/> step will use this Stopwatch's current ticks as
@@ -200,6 +203,8 @@ namespace StackExchange.Profiling
             // stopwatch must start before any child Timings are instantiated
             _sw = Settings.StopwatchProvider();
             Root = new Timing(this, parent: null, name: url);
+
+            LogEntries = new List<LogEntry>();
         }
 
 
@@ -258,6 +263,16 @@ namespace StackExchange.Profiling
                 return;
 
             Head.AddKeyValue(key, value);
+        }
+
+        internal void LogImpl(DateTime time, string message, string context, string level)
+        {
+            this.LogEntries.Add(new LogEntry { 
+                Time = time, 
+                Message = message, 
+                Context = context,
+                Level = level
+            });
         }
 
         /// <summary>
@@ -523,5 +538,16 @@ namespace StackExchange.Profiling
             return new HtmlString(text.ToString());
         }
 
+        public static void Log(this MiniProfiler profiler, string message, DateTime time, string context = null, string level = "info")
+        {
+            if (profiler != null)
+                profiler.LogImpl(time, message, context, level);
+        }
+
+        public static void Log(this MiniProfiler profiler, string message, string context = null, string level = "info")
+        {
+            if (profiler != null)
+                profiler.LogImpl(DateTime.UtcNow, message, context, level);
+        }
     }
 }

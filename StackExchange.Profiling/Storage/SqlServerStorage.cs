@@ -94,6 +94,8 @@ where not exists (select 1 from MiniProfilers where Id = @Id)"; // this syntax w
                 if (insertCount > 0)
                 {
                     SaveTiming(conn, profiler, profiler.Root);
+
+                    SaveLogEntries(conn, profiler);
                 }
 
                 // we may have a missing client timing - re save
@@ -275,13 +277,21 @@ values      (@MiniProfilerId,
             }
         }
 
+        protected virtual void SaveLogEntries(DbConnection conn, MiniProfiler profiler)
+        {
+            const string sql = @"insert into MiniProfilerLogEntries (MiniProfilerId, Time, Message, Context, Level) values (@MiniProfilerId, @Time, @Message, @Context, @Level)";
+
+            conn.Execute(sql, profiler.LogEntries.Select(l => new { MiniProfilerId = profiler.Id, Time = l.Time, Message = l.Message, Context = l.Context, Level = l.Level }));
+        }
+
         private static readonly Dictionary<Type, string> LoadSqlStatements = new Dictionary<Type, string>
         {
             { typeof(MiniProfiler), "select * from MiniProfilers where Id = @id" },
             { typeof(Timing), "select * from MiniProfilerTimings where MiniProfilerId = @id order by RowId" },
             { typeof(SqlTiming), "select * from MiniProfilerSqlTimings where MiniProfilerId = @id order by RowId" },
             { typeof(SqlTimingParameter), "select * from MiniProfilerSqlTimingParameters where MiniProfilerId = @id" },
-            { typeof(ClientTimings.ClientTiming), "select * from MiniProfilerClientTimings where MiniProfilerId = @id"}
+            { typeof(ClientTimings.ClientTiming), "select * from MiniProfilerClientTimings where MiniProfilerId = @id"},
+            { typeof(LogEntry), "select * from MiniProfilerLogEntries where MiniProfilerId = @id"}
         };
 
         private static readonly string LoadSqlBatch = string.Join("\n", LoadSqlStatements.Select(pair => pair.Value));
@@ -349,6 +359,9 @@ values      (@MiniProfilerId,
                         clientTimings.Timings = clientTimingList;
                     }
                     MapTimings(result, timings, sqlTimings, sqlParameters, clientTimings);
+
+                    var logEntries = multi.Read<LogEntry>().ToList();
+                    result.LogEntries = logEntries;
                 }
             }
 
@@ -372,6 +385,9 @@ values      (@MiniProfilerId,
                     clientTimings.Timings = clientTimingList;
                 }
                 MapTimings(result, timings, sqlTimings, sqlParameters,clientTimings);
+
+                var logEntries = LoadFor<LogEntry>(conn, idParameter).ToList();
+                result.LogEntries = logEntries;
             }
 
             return result;
@@ -513,10 +529,16 @@ create table MiniProfilerClientTimings
   MiniProfilerId    uniqueidentifier not null,
   Name nvarchar(200) not null,
   Start decimal(7,1),
-  Duration decimal(7,1)    
-)
+  Duration decimal(7,1)
+);
 
-";
-
+create table MiniProfilerLogEntries
+(
+  MiniProfilerId    uniqueidentifier not null,
+  Time              datetime not null,
+  Context           nvarchar(100),
+  Message           nvarchar(max),
+  Level             nvarchar(10)
+)";
     }
 }

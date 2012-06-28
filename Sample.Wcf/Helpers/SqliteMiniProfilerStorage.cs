@@ -121,7 +121,15 @@ namespace SampleWcf.Helpers
      Size              int null,
      Value             nvarchar null -- sqlite: remove (max)
   )"
-        
+,
+@"create table MiniProfilerLogEntries
+  (
+    MiniProfilerId    uniqueidentifier not null,
+    Time              datetime not null,
+    Context           nvarchar(100),
+    Message           nvarchar,
+    Level             nvarchar(10)    
+  )"
         };
     }
 }

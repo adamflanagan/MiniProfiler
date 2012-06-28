@@ -27,6 +27,8 @@ namespace SampleWeb.Controllers
         {
             var profiler = MiniProfiler.Current;
 
+			profiler.Log("Logging some info", this.GetType().FullName);
+			
             using (profiler.Step("Set page title"))
             {
                 ViewBag.Title = "Home Page";
@@ -44,6 +46,8 @@ namespace SampleWeb.Controllers
                 }
             }
 
+			profiler.Log("Warning!", this.GetType().FullName, "warning");
+			
             return View();
         }
 

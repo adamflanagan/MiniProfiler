@@ -155,9 +155,17 @@ create table MiniProfilerClientTimings
   MiniProfilerId    uniqueidentifier not null,
   Name varchar(130) not null,
   Start decimal(7, 1) not null,
-  Duration decimal(7, 1) not null    
-)
-"
+  Duration decimal(7, 1) not null
+)",
+
+@"create table MiniProfilerLogEntries
+(
+  MiniProfilerId    uniqueidentifier not null,
+  Time              datetime not null,
+  Context           nvarchar(100),
+  Message           nvarchar,
+  Level             nvarchar(10)
+)"
         };
     }
 }

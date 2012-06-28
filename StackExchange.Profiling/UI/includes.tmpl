@@ -49,6 +49,28 @@
             </tr>
           </tfoot>
         </table>
+        {{if LogEntries}}
+        <table class="profiler-timings">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Context</th>
+              <th>Level</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{each LogEntries}}
+            <tr>
+              <td>${MiniProfiler.renderDate(Time)}</td>
+              <td>${Context}</td>
+              <td>${Level}</td>
+              <td>${Message}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        {{/if}}
         {{if ClientTimings}}
         <table class="profiler-timings profiler-client-timings">
           <thead>
