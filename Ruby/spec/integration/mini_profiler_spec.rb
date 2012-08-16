@@ -8,15 +8,21 @@ describe Rack::MiniProfiler do
   def app
     @app ||= Rack::Builder.new {
       use Rack::MiniProfiler
+      map '/path2/a' do
+        run lambda { |env| [200, {'Content-Type' => 'text/html'}, '<h1>path1</h1>'] }
+      end
+      map '/path1/a' do
+        run lambda { |env| [200, {'Content-Type' => 'text/html'}, '<h1>path2</h1>'] }
+      end
       map '/post' do
         run lambda { |env| [302, {'Content-Type' => 'text/html'}, '<h1>POST</h1>'] }
       end
       map '/html' do
-        run lambda { |env| [200, {'Content-Type' => 'text/html'}, '<h1>Hi</h1>'] }
+        run lambda { |env| [200, {'Content-Type' => 'text/html'}, "<html><BODY><h1>Hi</h1></BODY>\n \t</html>"] }
       end
       map '/db' do 
         run lambda { |env| 
-          ::Rack::MiniProfiler.instance.record_sql("I want to be, in a db", 10)
+          ::Rack::MiniProfiler.record_sql("I want to be, in a db", 10)
           [200, {'Content-Type' => 'text/html'}, '<h1>Hi+db</h1>'] 
         }
       end
@@ -26,11 +32,17 @@ describe Rack::MiniProfiler do
           [200, {'Content-Type' => 'text/html'}, '<h1>Hi</h1>'] 
         }
       end
+      map '/whitelisted' do
+        run lambda { |env| 
+          Rack::MiniProfiler.authorize_request
+          [200, {'Content-Type' => 'text/html'}, '<h1>path1</h1>'] 
+        }
+      end
     }.to_app
   end
 
   before do
-    Rack::MiniProfiler.reset_configuration
+    Rack::MiniProfiler.reset_config
   end
 
   describe 'with a valid request' do
@@ -57,25 +69,40 @@ describe Rack::MiniProfiler do
       last_response.body.include?('MiniProfiler.init').should be_true
     end
 
+    it 'has a functioning share link' do 
+      h = last_response.headers['X-MiniProfiler-Ids']
+      id = ::JSON.parse(h)[0]
+      get "/mini-profiler-resources/results?id=#{id}"
+      last_response.should be_ok
+    end
+
   end
 
   describe 'configuration' do
     it "doesn't add MiniProfiler if the callback fails" do
-      Rack::MiniProfiler.configuration[:authorize_cb] = lambda {|env| false }
+      Rack::MiniProfiler.config.pre_authorize_cb = lambda {|env| false }
       get '/html'
-      last_response.headers.has_key?('X-MiniProfilerID').should be_false
+      last_response.headers.has_key?('X-MiniProfiler-Ids').should be_false
+    end
+
+    it "skips paths listed" do 
+      Rack::MiniProfiler.config.skip_paths = ['/path/', '/path2/']
+      get '/path2/a'
+      last_response.headers.has_key?('X-MiniProfiler-Ids').should be_false
+      get '/path1/a'
+      last_response.headers.has_key?('X-MiniProfiler-Ids').should be_true
     end
   end
 
   def load_prof(response)
     id = response.headers['X-MiniProfiler-Ids']
     id = ::JSON.parse(id)[0]
-    Rack::MiniProfiler.configuration[:storage_instance].load(id)
+    Rack::MiniProfiler.config.storage_instance.load(id)
   end
 
   describe 'special options' do
     it "omits db backtrace if requested" do 
-      get '/db?pp=skip-backtrace' 
+      get '/db?pp=no-backtrace' 
       prof = load_prof(last_response)
       stack = prof["Root"]["SqlTimings"][0]["StackTraceSnippet"]
       stack.should be_nil
@@ -96,11 +123,25 @@ describe Rack::MiniProfiler do
   describe 'sampling mode' do
     it "should sample stack traces if requested" do 
       get '/3ms?pp=sample' 
-      prof = load_prof(last_response)
+      last_response["Content-Type"].should == 'text/plain'
+    end
+  end
 
-      # TODO: implement me
-      #prof["Root"]["SampleData"].length should > 0 
 
+  describe 'authorization mode whitelist' do
+    before do 
+      Rack::MiniProfiler.config.authorization_mode = :whitelist
+    end
+
+    it "should ban requests that are not whitelisted" do 
+      get '/html'
+      last_response.headers['X-MiniProfiler-Ids'].should be_nil
+    end
+
+    it "should allow requests that are whitelisted" do 
+      set_cookie("__profilin=stylin")
+      get '/whitelisted'
+      last_response.headers['X-MiniProfiler-Ids'].should_not be_nil
     end
   end
 

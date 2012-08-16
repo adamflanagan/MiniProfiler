@@ -24,21 +24,18 @@ describe Rack::MiniProfiler::ClientTimerStruct do
 
     describe 'without a form' do
       before do
-        @client.init_from_form_data({}, new_page)
+        @client = Rack::MiniProfiler::ClientTimerStruct.init_from_form_data({}, new_page)
       end
       
-      it 'has no Timings' do
-        @client['Timings'].should be_nil
+      it 'is null' do
+        @client.should be_nil
       end
 
-      it 'has no RedirectCount' do
-        @client['RedirectCount'].should be_nil
-      end
     end
 
     describe 'with a simple request' do
       before do
-        @client.init_from_form_data(fixture(:simple_client_request), new_page)
+        @client = Rack::MiniProfiler::ClientTimerStruct.init_from_form_data(fixture(:simple_client_request), new_page)
       end
 
       it 'has the correct RedirectCount' do
@@ -47,6 +44,21 @@ describe Rack::MiniProfiler::ClientTimerStruct do
 
       it 'has Timings' do
         @client['Timings'].should_not be_empty
+      end
+      
+      describe "bob.js" do
+        before do
+          @bob = @client['Timings'].find {|t| t["Name"] == "bob.js"}
+        end
+
+        it 'has it in the timings' do 
+          @bob.should_not be_nil
+        end
+
+        it 'has the correct duration' do 
+          @bob["Duration"].should == 6
+        end
+        
       end
 
       describe "Navigation" do
@@ -89,7 +101,7 @@ describe Rack::MiniProfiler::ClientTimerStruct do
 
     describe 'with some odd values' do
       before do
-        @client.init_from_form_data(fixture(:weird_client_request), new_page)        
+        @client = Rack::MiniProfiler::ClientTimerStruct.init_from_form_data(fixture(:weird_client_request), new_page)        
       end
 
       it 'has the correct RedirectCount' do

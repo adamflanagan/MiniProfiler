@@ -16,7 +16,7 @@ module Rack
               "Level" => 0,
               "User" => "unknown user",
               "HasUserViewed" => false,
-              "ClientTimings" => ClientTimerStruct.new,
+              "ClientTimings" => nil,
               "DurationMilliseconds" => 0,
               "HasTrivialTimings" => true,
               "HasAllTrivialTimigs" => false,
@@ -35,13 +35,17 @@ module Rack
       def duration_ms
         @attributes['Root']['DurationMilliseconds']
       end
+
+      def root
+        @attributes['Root']
+      end
       
       def to_json(*a)
         attribs = @attributes.merge(
           "Started" => '/Date(%d)/' % @attributes['Started'], 
           "DurationMilliseconds" => @attributes['Root']['DurationMilliseconds']
         )        
-        ::JSON.generate(attribs, a[0])
+        ::JSON.generate(attribs, :max_nesting => 100)
       end
     end
     
