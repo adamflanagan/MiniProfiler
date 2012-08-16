@@ -503,6 +503,12 @@ var MiniProfiler = (function ($) {
         bindDocumentEvents();
     };
 
+    var parseDate = function (jsonDate) { // JavaScriptSerializer sends dates as /Date(1308024322065)/
+        if (jsonDate) {
+            return (typeof jsonDate === 'string') ? new Date(parseInt(jsonDate.replace("/Date(", "").replace(")/", ""), 10)) : jsonDate;
+        }
+    };
+
     return {
 
         init: function (opt) {
@@ -570,8 +576,18 @@ var MiniProfiler = (function ($) {
         },
 
         renderDate: function (jsonDate) { // JavaScriptSerializer sends dates as /Date(1308024322065)/
-            if (jsonDate) {
-                return (typeof jsonDate === 'string') ? new Date(parseInt(jsonDate.replace("/Date(", "").replace(")/", ""), 10)).toUTCString() : jsonDate;
+            var date = parseDate(jsonDate);
+
+            if (date) {
+                return date.toUTCString();
+            }
+        },
+
+        renderTime: function (jsonDate) {
+            var date = parseDate(jsonDate);
+
+            if (date) {
+                return date.toLocaleTimeString() + (date.getUTCMilliseconds() / 1000).toString().substring(1);
             }
         },
 

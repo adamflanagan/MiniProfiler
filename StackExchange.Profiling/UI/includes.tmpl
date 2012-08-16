@@ -17,6 +17,7 @@
         <span class="profiler-server-time">${MachineName} on ${MiniProfiler.renderDate(Started)}</span>
       </div>
       <div class="profiler-output">
+        <span class="title">Server Timings</span>
         <table class="profiler-timings">
           <thead>
             <tr>
@@ -50,6 +51,7 @@
           </tfoot>
         </table>
         {{if LogEntries}}
+        <span class="title">Logs</span>
         <table class="profiler-timings">
           <thead>
             <tr>
@@ -62,7 +64,7 @@
           <tbody>
             {{each LogEntries}}
             <tr>
-              <td>${MiniProfiler.renderDate(Time)}</td>
+              <td>${MiniProfiler.renderTime(Time)}</td>
               <td>${Context}</td>
               <td>${Level}</td>
               <td>${Message}</td>
